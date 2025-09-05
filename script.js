@@ -27,8 +27,8 @@ class DutyScheduleTracker {
         this.currentWeekIndex = 0;
         this.weeks = this.generateWeeks();
         
-        // Duty data storage (in-memory only)
-        this.dutyData = this.initializeDutyData();
+        // Duty data storage with localStorage persistence
+        this.dutyData = this.loadDutyData();
         
         // UI elements
         this.elements = {
@@ -43,7 +43,10 @@ class DutyScheduleTracker {
             raThisWeek: document.getElementById('raThisWeek'),
             arThisWeek: document.getElementById('arThisWeek'),
             raToDate: document.getElementById('raToDate'),
-            arToDate: document.getElementById('arToDate')
+            arToDate: document.getElementById('arToDate'),
+            clearDataBtn: document.getElementById('clearData'),
+            exportDataBtn: document.getElementById('exportData'),
+            importDataBtn: document.getElementById('importData')
         };
 
         this.initializeApp();
@@ -82,6 +85,25 @@ class DutyScheduleTracker {
         return days;
     }
 
+    // Load duty data from localStorage or initialize if not found
+    loadDutyData() {
+        const storageKey = 'st-edwards-hall-duty-data';
+        const savedData = localStorage.getItem(storageKey);
+        
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                // Merge with any new weeks that might have been added
+                return this.mergeWithNewWeeks(parsedData);
+            } catch (error) {
+                console.warn('Error loading saved data, initializing fresh data:', error);
+                return this.initializeDutyData();
+            }
+        }
+        
+        return this.initializeDutyData();
+    }
+
     // Initialize duty data structure
     initializeDutyData() {
         const data = {};
@@ -109,6 +131,45 @@ class DutyScheduleTracker {
         });
         
         return data;
+    }
+
+    // Merge saved data with any new weeks
+    mergeWithNewWeeks(savedData) {
+        const mergedData = { ...savedData };
+        
+        // Ensure all staff members exist
+        [...this.staff.ra, ...this.staff.ar].forEach(staffName => {
+            if (!mergedData[staffName]) {
+                mergedData[staffName] = {
+                    type: this.staff.ra.includes(staffName) ? 'ra' : 'ar',
+                    duties: {}
+                };
+            }
+        }
+        
+        // Add any new days that might not be in saved data
+        this.weeks.forEach(week => {
+            week.days.forEach(day => {
+                const dayKey = this.getDayKey(day);
+                [...this.staff.ra, ...this.staff.ar].forEach(staffName => {
+                    if (!mergedData[staffName].duties.hasOwnProperty(dayKey)) {
+                        mergedData[staffName].duties[dayKey] = false;
+                    }
+                });
+            });
+        });
+        
+        return mergedData;
+    }
+
+    // Save duty data to localStorage
+    saveDutyData() {
+        const storageKey = 'st-edwards-hall-duty-data';
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(this.dutyData));
+        } catch (error) {
+            console.error('Error saving data to localStorage:', error);
+        }
     }
 
     // Get unique key for a day
@@ -148,6 +209,11 @@ class DutyScheduleTracker {
         this.elements.prevWeekBtn.addEventListener('click', () => this.previousWeek());
         this.elements.nextWeekBtn.addEventListener('click', () => this.nextWeek());
         this.elements.viewAllWeeksBtn.addEventListener('click', () => this.toggleAllWeeksView());
+        
+        // Data management buttons
+        this.elements.clearDataBtn.addEventListener('click', () => this.clearAllData());
+        this.elements.exportDataBtn.addEventListener('click', () => this.exportData());
+        this.elements.importDataBtn.addEventListener('click', () => this.importData());
         
         // Bind duty cell clicks
         this.elements.scheduleBody.addEventListener('click', (e) => {
@@ -294,6 +360,9 @@ class DutyScheduleTracker {
             cell.classList.remove('on');
             cell.textContent = '';
         }
+        
+        // Save data to localStorage
+        this.saveDutyData();
         
         // Update statistics
         this.updateStatistics();
@@ -473,6 +542,94 @@ class DutyScheduleTracker {
         row.appendChild(totalCell);
         
         return row;
+    }
+
+    // Data Management Methods
+    clearAllData() {
+        if (confirm('Are you sure you want to clear all duty data? This action cannot be undone.')) {
+            this.dutyData = this.initializeDutyData();
+            this.saveDutyData();
+            this.renderCurrentWeek();
+            this.updateStatistics();
+            alert('All duty data has been cleared.');
+        }
+    }
+
+    exportData() {
+        try {
+            const dataToExport = {
+                version: '1.0.0',
+                exportDate: new Date().toISOString(),
+                dutyData: this.dutyData,
+                staff: this.staff,
+                dateRange: {
+                    start: this.startDate.toISOString(),
+                    end: this.endDate.toISOString()
+                }
+            };
+            
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `st-edwards-hall-duty-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            alert('Duty data exported successfully!');
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            alert('Error exporting data. Please try again.');
+        }
+    }
+
+    importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate the imported data structure
+                    if (this.validateImportedData(importedData)) {
+                        if (confirm('This will replace all current duty data. Are you sure?')) {
+                            this.dutyData = importedData.dutyData;
+                            this.saveDutyData();
+                            this.renderCurrentWeek();
+                            this.updateStatistics();
+                            alert('Duty data imported successfully!');
+                        }
+                    } else {
+                        alert('Invalid data file. Please make sure you are importing a valid duty data file.');
+                    }
+                } catch (error) {
+                    console.error('Error importing data:', error);
+                    alert('Error reading the file. Please make sure it is a valid JSON file.');
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    validateImportedData(data) {
+        // Basic validation of imported data structure
+        return data && 
+               data.dutyData && 
+               data.staff && 
+               data.staff.ra && 
+               data.staff.ar &&
+               Array.isArray(data.staff.ra) &&
+               Array.isArray(data.staff.ar);
     }
 }
 
