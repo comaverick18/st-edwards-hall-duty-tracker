@@ -24,6 +24,8 @@ The St. Edward's Hall Duty Schedule Tracker is a comprehensive web application t
 - **To Date**: Cumulative duty count from start date
 - **Visual Indicators**: Color-coded duty status and weekend highlighting
 - **Interactive Toggle**: Click any cell to toggle duty ON/OFF
+- **Data Persistence**: Automatic saving to browser storage
+- **Data Management**: Export, import, and clear data functionality
 
 ### 🎨 **Design & UX**
 - **St. Edward's Theme**: Professional green color scheme (#2c5530)
@@ -76,18 +78,27 @@ The St. Edward's Hall Duty Schedule Tracker is a comprehensive web application t
 2. **Visual Feedback**: Green cells indicate active duties
 3. **Weekend Cells**: Light blue background for Saturday/Sunday
 4. **Statistics**: Real-time updates in summary cards and table columns
+5. **Auto-Save**: Data automatically saves to your browser
+6. **Data Management**: Use Clear, Export, and Import buttons for data control
 
 ### Mobile Usage
 - **Touch Navigation**: Swipe left/right to navigate weeks
 - **Responsive Layout**: Optimized for mobile devices
 - **Touch-Friendly**: Large touch targets for easy interaction
 
+### Data Management
+1. **Automatic Saving**: All changes are automatically saved to your browser
+2. **Clear All Data**: Reset all duty assignments to start fresh
+3. **Export Data**: Download your data as a JSON file for backup
+4. **Import Data**: Upload previously exported data to restore assignments
+5. **Data Persistence**: Your data survives browser restarts and computer reboots
+
 ## 🛠️ Technical Details
 
 ### Architecture
 - **Frontend**: Pure HTML5, CSS3, JavaScript (ES6+)
 - **No Dependencies**: Zero external libraries or frameworks
-- **Data Storage**: In-memory only (no localStorage)
+- **Data Storage**: localStorage for persistence across sessions
 - **Browser Support**: Modern browsers with ES6 support
 
 ### File Structure
@@ -109,6 +120,8 @@ st-edwards-hall-duty-tracker/
 - **Data Structure**: Staff and duty tracking system
 - **UI Components**: Interactive table and navigation
 - **Statistics Engine**: Real-time calculation and display
+- **Data Persistence**: localStorage integration for session continuity
+- **Data Management**: Export, import, and clear functionality
 
 ## 🎯 Use Cases
 
