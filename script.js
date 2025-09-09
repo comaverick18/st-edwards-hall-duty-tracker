@@ -145,7 +145,7 @@ class DutyScheduleTracker {
                     duties: {}
                 };
             }
-        }
+        });
         
         // Add any new days that might not be in saved data
         this.weeks.forEach(week => {
